@@ -12,9 +12,9 @@ interface CustomRequest extends Request {
 }
 export const isAuthenticated = asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
 	try {
-		const access_token = req.cookies.accessToken;
-		const refresh_token = req.cookies.refreshToken;
-		console.log(refresh_token, "refresh_token")
+		const access_token = req.body.token;
+		// const refresh_token = req.cookies.refreshToken;
+		// console.log(refresh_token, "refresh_token")
 		
 		if (!access_token) {
 			return next(new CustomError(400, "Please login to access this resource."));

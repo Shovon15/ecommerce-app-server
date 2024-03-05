@@ -2,12 +2,9 @@ import express, { NextFunction, Request, Response } from "express"
 import { ErrorHandler } from "./utils/error";
 import userRouter from "./routes/userRoutes";
 import cors from "cors";
-import cookieParser from "cookie-parser";
+// import cookieParser from "cookie-parser";
 import { clientOrigin } from "./secret";
-// import { clientOrigin } from "./secret";
-// import userRouter from "./routes/userRoutes";
-// import { ErrorHandler } from "./utils/error";
-// import projectRouter from "./routes/projectRoutes";
+
 
 export const app = express();
 
@@ -18,7 +15,7 @@ app.use(cors({
     credentials: true,
 }));
 
-app.use(cookieParser());
+// app.use(cookieParser());
 
 //routes
 app.use("/api/v1", userRouter);

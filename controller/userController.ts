@@ -7,68 +7,36 @@ import { uploadOnCloudinary } from "../utils/cloudinary";
 import { JwtPayload, sign, verify } from "jsonwebtoken";
 import { activationTokenSecret, refreshTokenSecret } from "../secret";
 import sendMail from "../config/sendMail";
+import { IRegistrationBody, createActivationToken } from "../helper/generateAccountAcctivationToken";
+import { generateAccessAndRefereshTokens } from "../helper/generateRefreshAndAccessToken";
 
-interface ITokenOptions {
-    httpOnly: boolean;
-    sameSite: "lax" | "strict" | "none" | undefined;
-    secure?: boolean;
-}
-
-interface IActivationToken {
-    token: string;
-    activationCode: string;
-}
-
-interface IRegistrationBody {
+interface IRegisterRequest {
     name: string;
     email: string;
+    password: string;
 }
 
-const createActivationToken = (user: IRegistrationBody): IActivationToken => {
-    const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const token = sign(
-        {
-            activationCode,
-            user,
-        },
-        activationTokenSecret,
-        {
-            expiresIn: "5m",
-        }
-    );
+interface IActivationRequest {
+    activation_token: string;
+    activation_code: string;
+}
 
-    return {
-        token,
-        activationCode,
-    };
-};
 
-const generateAccessAndRefereshTokens = async (userId: string) => {
-    try {
-        const user = await UserModel.findById({ _id: userId });
-        if (!user) {
-            throw new CustomError(404, "User not found");
-        }
+interface ILoginRequest {
+    email: string;
+    password: string;
+}
 
-        const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
-
-        user.refreshToken = refreshToken;
-        await user.save({ validateBeforeSave: false });
-
-        return { accessToken, refreshToken };
-    } catch (error) {
-        throw new CustomError(500, "Something went wrong while generating referesh and access token");
-    }
-};
 // test route////
 export const user = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const user = await UserModel.find({});
     return res.status(200).json(new ResponseHandler(200, { user }, "User return Successfully"));
 });
 
+
+//register -----------
 export const userRegister = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body as IRegisterRequest;
 
     if ([email, name, password].some((field) => field?.trim() === "")) {
         throw new CustomError(400, "All fields are required");
@@ -79,6 +47,7 @@ export const userRegister = asyncHandler(async (req: Request, res: Response, nex
     });
 
     let token;
+
     const registeredIUser: IRegistrationBody = {
         name,
         email,
@@ -92,13 +61,13 @@ export const userRegister = asyncHandler(async (req: Request, res: Response, nex
 
         console.log(token, "activation token and code")
 
-        // const data = { user: { name }, activationCode: token.activationCode };
-        // await sendMail({
-        //     email: isEmailExist.email,
-        //     subject: "Activate your account",
-        //     template: "activationEmail.ejs",
-        //     data,
-        // });
+        const data = { user: { name }, activationCode: token.activationCode };
+        await sendMail({
+            email: isEmailExist.email,
+            subject: "Activate your account",
+            template: "activationEmail.ejs",
+            data,
+        });
 
     } else {
         token = createActivationToken(registeredIUser);
@@ -110,13 +79,13 @@ export const userRegister = asyncHandler(async (req: Request, res: Response, nex
             name,
         });
 
-        // const data = { user: { name }, activationCode: token.activationCode };
-        // await sendMail({
-        //     email: user.email,
-        //     subject: "Activate your account",
-        //     template: "activationEmail.ejs",
-        //     data,
-        // });
+        const data = { user: { name }, activationCode: token.activationCode };
+        await sendMail({
+            email: user.email,
+            subject: "Activate your account",
+            template: "activationEmail.ejs",
+            data,
+        });
     }
 
     // const avatarLocalPath = req.file?.path;
@@ -142,10 +111,7 @@ export const userRegister = asyncHandler(async (req: Request, res: Response, nex
     );
 });
 
-interface IActivationRequest {
-    activation_token: string;
-    activation_code: string;
-}
+
 export const userActivation = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { activation_token, activation_code } = req.body as IActivationRequest;
@@ -182,10 +148,7 @@ export const userActivation = asyncHandler(async (req: Request, res: Response, n
     }
 });
 
-interface ILoginRequest {
-    email: string;
-    password: string;
-}
+
 export const userLogin = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { email, password: enteredPassword } = req.body as ILoginRequest;
 
@@ -214,23 +177,16 @@ export const userLogin = asyncHandler(async (req: Request, res: Response, next: 
 
     const loggedInUser = await UserModel.findById(user._id).select(" -refreshToken");
 
-    const options: ITokenOptions = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict" 
-    };
+    await UserModel.findByIdAndUpdate(user._id, { refreshToken });
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
         .json(
             new ResponseHandler(
                 200,
                 {
                     user: loggedInUser,
                     accessToken,
-                    refreshToken,
                 },
                 "User logged In Successfully"
             )
@@ -311,11 +267,11 @@ export const refreshAccessToken = asyncHandler(async (req: Request, res: Respons
             throw new CustomError(401, "Refresh token is expired or used");
         }
 
-        const options: ITokenOptions = {
-            httpOnly: true,
-            secure: true,
-            sameSite: "strict",
-        };
+        // const options: ITokenOptions = {
+        //     httpOnly: true,
+        //     secure: true,
+        //     sameSite: "strict",
+        // };
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefereshTokens(user._id);
 
@@ -324,8 +280,6 @@ export const refreshAccessToken = asyncHandler(async (req: Request, res: Respons
         return (
             res
                 .status(200)
-                .cookie("accessToken", accessToken, options)
-                .cookie("refreshToken", newRefreshToken, options)
                 .json(
                     new ResponseHandler(
                         200,
@@ -359,16 +313,8 @@ export const userLogout = asyncHandler(async (req: CustomRequest, res: Response,
         }
     );
 
-    const options: ITokenOptions = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict" 
-    };
-
     return res
         .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
         .json(
             new ResponseHandler(
                 200,

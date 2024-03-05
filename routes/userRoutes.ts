@@ -20,8 +20,8 @@ userRouter.post("/login", userLogin);
 userRouter.post("/user-activation", userActivation);
 userRouter.post("/social-login", socialAuth);
 userRouter.post("/refresh-access-token", refreshAccessToken);
-userRouter.get("/logout", isAuthenticated, userLogout);
-userRouter.get("/user-info", isAuthenticated, userInfo);
+userRouter.post("/logout", isAuthenticated, userLogout);
+userRouter.post("/user-info", isAuthenticated, userInfo);
 
 //test route (get all user)
 // userRouter.get("/user", user);
