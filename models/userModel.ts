@@ -17,6 +17,7 @@ export interface IUser extends Document {
     avatar: IAvatar;
     refreshToken: string;
     isVerified: boolean;
+    userRole: string;
     comparePassword: (password: string) => Promise<boolean>;
     generateAccessToken: () => string;
     generateRefreshToken: () => string;
@@ -59,6 +60,10 @@ const userSchema: Schema<IUser> = new Schema({
         type: Boolean,
         default: false,
     },
+    userRole: {
+        type: String,
+        default: "user",
+    },
 }, { timestamps: true });
 
 
@@ -88,7 +93,7 @@ userSchema.methods.generateAccessToken = function () {
         },
         accessTokenSecret,
         {
-            expiresIn: "5m",
+            expiresIn: "1d",
         }
     );
 };
@@ -101,7 +106,7 @@ userSchema.methods.generateRefreshToken = function () {
         },
         refreshTokenSecret,
         {
-            expiresIn: "5m",
+            expiresIn: "30d",
         }
     );
 }

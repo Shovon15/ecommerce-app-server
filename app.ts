@@ -1,8 +1,9 @@
 import express, { NextFunction, Request, Response } from "express"
 import { ErrorHandler } from "./utils/error";
 import userRouter from "./routes/userRoutes";
-// import cors from "cors";
+import cors from "cors";
 import cookieParser from "cookie-parser";
+import { clientOrigin } from "./secret";
 // import { clientOrigin } from "./secret";
 // import userRouter from "./routes/userRoutes";
 // import { ErrorHandler } from "./utils/error";
@@ -12,11 +13,11 @@ export const app = express();
 
 // middleware--------------------
 app.use(express.json({ limit: "100mb" }));
-// app.use(cors({
-//     origin: clientOrigin,
-//     credentials: true,
+app.use(cors({
+    origin: clientOrigin,
+    credentials: true,
+}));
 
-// }));
 app.use(cookieParser());
 
 //routes
