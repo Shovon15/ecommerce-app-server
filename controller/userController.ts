@@ -8,6 +8,12 @@ import { JwtPayload, sign, verify } from "jsonwebtoken";
 import { activationTokenSecret, refreshTokenSecret } from "../secret";
 import sendMail from "../config/sendMail";
 
+interface ITokenOptions {
+    httpOnly: boolean;
+    sameSite: "lax" | "strict" | "none" | undefined;
+    secure?: boolean;
+}
+
 interface IActivationToken {
     token: string;
     activationCode: string;
@@ -208,9 +214,10 @@ export const userLogin = asyncHandler(async (req: Request, res: Response, next: 
 
     const loggedInUser = await UserModel.findById(user._id).select(" -refreshToken");
 
-    const options = {
+    const options: ITokenOptions = {
         httpOnly: true,
         secure: true,
+        sameSite: "lax" 
     };
 
     return res
@@ -304,9 +311,10 @@ export const refreshAccessToken = asyncHandler(async (req: Request, res: Respons
             throw new CustomError(401, "Refresh token is expired or used");
         }
 
-        const options = {
+        const options: ITokenOptions = {
             httpOnly: true,
             secure: true,
+            sameSite: "lax",
         };
 
         const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefereshTokens(user._id);
@@ -351,9 +359,10 @@ export const userLogout = asyncHandler(async (req: CustomRequest, res: Response,
         }
     );
 
-    const options = {
+    const options: ITokenOptions = {
         httpOnly: true,
         secure: true,
+        sameSite: "lax" 
     };
 
     return res
